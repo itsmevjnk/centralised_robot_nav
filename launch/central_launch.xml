@@ -1,5 +1,6 @@
 <launch>
     <arg name="use_sim_time" default="false"/>
+    <arg name="rviz" default="true"/>
 
     <node name="central_node" pkg="central_nav" exec="central_node" output="screen">
         <remap from="robot_poses" to="/robot_poses"/>
@@ -7,5 +8,17 @@
         <remap from="robot_pass" to="/robot_pass"/>
         <remap from="robot_stop" to="/robot_stop"/>
         <param name="use_sim_time" value="$(var use_sim_time)"/>    
+    </node>
+
+    <!-- VISUALISATION -->
+
+    <node pkg="pose_publisher" exec="tf_node" name="pose_to_tf" if="$(var rviz)">
+        <remap from="pose" to="/robot_poses" />
+        <remap from="pose_cloud" to="/obstacle_cloud" />
+        <param name="use_sim_time" value="$(var use_sim_time)" />
+    </node>
+
+    <node pkg="rviz2" exec="rviz2" name="robots_rviz" args="-d $(find-pkg-share central_nav)/rviz/robots.rviz" if="$(var rviz)">
+        <param name="use_sim_time" value="$(var use_sim_time)" />
     </node>
 </launch>
