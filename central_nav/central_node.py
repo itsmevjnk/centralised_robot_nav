@@ -13,6 +13,8 @@ from nav_msgs.msg import Path
 from std_msgs.msg import String, ColorRGBA
 from visualization_msgs.msg import MarkerArray, Marker
 
+from typing_extensions import Self
+
 IX_RADIUS = 0.2 # intersection radius in metres
 
 class Robot:
@@ -55,6 +57,77 @@ class Robot:
     def path(self) -> list[tuple[tuple[float, float], tuple[float, float]]]:
         if len(self.waypoints) < 2: return None
         return [(self.waypoints[i], self.waypoints[i + 1]) for i in range(len(self.waypoints) - 1)] # connect points together into segments
+    
+    @property
+    def marker(self) -> Marker:
+        marker = Marker()
+        # marker.header.stamp = self.get_clock().now().to_msg()
+        marker.header.frame_id = 'map'
+        marker.type = Marker.LINE_STRIP
+        marker.points = [Point(x=x, y=y) for (x, y) in self.waypoints]
+        marker.pose.orientation.w = 1.0
+        marker.scale.x = 0.01
+        marker.color = self.colour
+        marker.frame_locked = True
+        return marker
+
+class Intersection:
+    def __init__(self, position: tuple[float, float], occupant: str | None = None):
+        self.position = position
+        self.occupant = occupant
+    
+    @property
+    def occupied(self) -> bool:
+        return self.occupant is not None
+    
+    def can_enter(self, robot: str) -> bool:
+        return self.occupant is None or self.occupant == robot # either unoccupied, or occupied by us
+
+    def enter(self, robot: str) -> bool: # returns whether robot can proceed
+        if self.can_enter(robot):
+            self.occupant = robot
+            return True
+        else:
+            return False
+    
+    def leave(self, robot: str):
+        if self.occupant == robot: # we're originally occupying the intersection
+            self.occupant = None
+    
+    def distance(self, position: tuple[float, float]) -> float:
+        return self.distance(position[0], position[1])
+
+    def distance(self, x: float, y: float) -> float:
+        x0, y0 = self.position
+        return ((x-x0)**2 + (y-y0)**2)**0.5
+    
+    def closest_intersection(self, intersections: list[Self]) -> Self:
+        min_distance = float('inf')
+        min_ix = None
+        for ix in intersections:
+            distance = self.distance(ix.position)
+            if distance < min_distance:
+                min_distance = distance
+                min_ix = ix
+        
+        return min_ix
+
+    @property
+    def marker(self):
+        marker = Marker()
+        # marker.header.stamp = self.get_clock().now().to_msg()
+        marker.header.frame_id = 'map'
+        marker.type = Marker.CYLINDER
+        marker.pose.position.x, marker.pose.position.y = self.position   
+        marker.pose.orientation.w = 1.0
+        marker.scale.x = marker.scale.y = IX_RADIUS * 2; marker.scale.z = 0.01
+        marker.color.a = 1.0
+        if self.occupied:
+            marker.color.r = 1.0
+        else:
+            marker.color.g = 1.0
+        marker.frame_locked = True
+        return marker
 
 class CentralNavigationNode(Node):
     def __init__(self):
@@ -68,7 +141,7 @@ class CentralNavigationNode(Node):
         self.create_subscription(TransformStamped, 'robot_poses', self.pose_cb, qos.qos_profile_system_default)
         self.create_subscription(Path, 'robot_paths', self.path_cb, qos.qos_profile_system_default)
 
-        self.collision_points: list[tuple[float, float]] = []
+        self.collision_points: list[Intersection] = []
 
     def pose_cb(self, data: TransformStamped):
         robot_name = data.child_frame_id # as per pose_publisher node
@@ -113,7 +186,7 @@ class CentralNavigationNode(Node):
             colliding_robots = set([robot_from_seg_idx(i) for i in segment_idxs])
             if len(colliding_robots) > 1: # count number of robots in collision zone
                 self.get_logger().info(f'collision point at {point}: {colliding_robots}')
-                self.collision_points.append(point)
+                self.collision_points.append(Intersection(point))
 
         self.publish_markers()
     
@@ -121,27 +194,14 @@ class CentralNavigationNode(Node):
         markers = [Marker(action=Marker.DELETEALL)] # delete all markers
         # send collision points out for visualisation
         for point in self.collision_points:
-            marker = Marker()
+            marker = point.marker
             marker.header.stamp = self.get_clock().now().to_msg()
-            marker.header.frame_id = 'map'
-            marker.type = Marker.CYLINDER
-            marker.pose.position.x, marker.pose.position.y = point
-            marker.pose.orientation.w = 1.0
-            marker.scale.x = marker.scale.y = IX_RADIUS * 2; marker.scale.z = 0.01
-            marker.color.r = 1.0; marker.color.a = 1.0
-            marker.frame_locked = True
             marker.id = len(markers)
             markers.append(marker)
         # send paths out
         for robot in self.robots.values():
-            marker = Marker()
+            marker = robot.marker
             marker.header.stamp = self.get_clock().now().to_msg()
-            marker.header.frame_id = 'map'
-            marker.type = Marker.LINE_STRIP
-            marker.points = [Point(x=x, y=y) for (x, y) in robot.waypoints]
-            marker.scale.x = 0.01
-            marker.color = robot.colour
-            marker.frame_locked = True
             marker.id = len(markers)
             markers.append(marker)
         self.markers_pub.publish(MarkerArray(markers=markers))
