@@ -1,0 +1,10 @@
+name: pose_bridge
+from_domain: 0
+to_domain: 4
+topics:
+  robot_poses:
+    type: geometry_msgs/msg/TransformStamped
+    bidirectional: true
+  robot_paths:
+    type: nav_msgs/msg/Path
+    bidirectional: true

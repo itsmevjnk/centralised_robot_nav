@@ -1,0 +1,11 @@
+<launch>
+    <arg name="use_sim_time" default="false"/>
+
+    <node name="central_node" pkg="central_nav" exec="central_node" output="screen">
+        <remap from="robot_poses" to="/robot_poses"/>
+        <remap from="robot_paths" to="/robot_paths"/>
+        <remap from="robot_pass" to="/robot_pass"/>
+        <remap from="robot_stop" to="/robot_stop"/>
+        <param name="use_sim_time" value="$(var use_sim_time)"/>    
+    </node>
+</launch>
