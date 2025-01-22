@@ -64,6 +64,7 @@ class Event:
         "type",
         "point",
         "segment",
+        "segment_idx",
 
         # this is just cache,
         # we may remove or calculate slope on the fly
@@ -82,11 +83,12 @@ class Event:
         if USE_VERTICAL:
             START_VERTICAL = 3
 
-    def __init__(self, type, point, segment, slope):
+    def __init__(self, type, point, segment, segment_idx, slope):
         assert isinstance(point, tuple)
         self.type = type
         self.point = point
         self.segment = segment
+        self.segment_idx = segment_idx
 
         # will be None for INTERSECTION
         self.slope = slope
@@ -228,21 +230,27 @@ class SweepLine:
         Return a list of unordered intersection '(point, segment)' pairs,
         where segments may contain 2 or more values.
         """
-        if Real is float:
-            return [
-                (p, [event.segment for event in event_set])
-                for p, event_set in self.intersections.items()
-            ]
-        else:
-            return [
-                (
-                    (float(p[0]), float(p[1])),
-                    [((float(event.segment[0][0]), float(event.segment[0][1])),
-                      (float(event.segment[1][0]), float(event.segment[1][1])))
-                     for event in event_set],
-                )
-                for p, event_set in self.intersections.items()
-            ]
+
+        return [
+            (p, [event.segment_idx for event in event_set])
+            for p, event_set in self.intersections.items()
+        ]
+
+        # if Real is float:
+        #     return [
+        #         (p, [event.segment for event in event_set])
+        #         for p, event_set in self.intersections.items()
+        #     ]
+        # else:
+        #     return [
+        #         (
+        #             (float(p[0]), float(p[1])),
+        #             [((float(event.segment[0][0]), float(event.segment[0][1])),
+        #               (float(event.segment[1][0]), float(event.segment[1][1])))
+        #              for event in event_set],
+        #         )
+        #         for p, event_set in self.intersections.items()
+        #     ]
 
     # Checks if an intersection exists between two Events 'a' and 'b'.
     def _check_intersection(self, a: Event, b: Event):
@@ -289,7 +297,7 @@ class SweepLine:
         # if the intersection is on the sweep line and it's above the
         # current event-point, add it as a new Event to the queue.
         if is_new and p[X] >= self._current_event_point_x:
-            event_isect = Event(Event.Type.INTERSECTION, p, None, None)
+            event_isect = Event(Event.Type.INTERSECTION, p, None, None, None)
             self.queue.offer(p, event_isect)
 
     def _sweep_to(self, p):
@@ -465,7 +473,7 @@ class EventQueue:
         self.events_scan = RBTree()
         # segments = [s for s in segments if s[0][0] != s[1][0] and s[0][1] != s[1][1]]
 
-        for s in segments:
+        for ns, s in enumerate(segments):
             assert s[0][X] <= s[1][X]
 
             slope = slope_v2v2(*s)
@@ -473,15 +481,15 @@ class EventQueue:
             if s[0] == s[1]:
                 pass
             elif USE_VERTICAL and (s[0][X] == s[1][X]):
-                e_start = Event(Event.Type.START_VERTICAL, s[0], s, slope)
+                e_start = Event(Event.Type.START_VERTICAL, s[0], s, ns, slope)
 
                 if USE_DEBUG:
                     e_start.other = e_start  # FAKE, avoid error checking
 
                 self.offer(s[0], e_start)
             else:
-                e_start = Event(Event.Type.START, s[0], s, slope)
-                e_end = Event(Event.Type.END, s[1], s, slope)
+                e_start = Event(Event.Type.START, s[0], s, ns, slope)
+                e_end = Event(Event.Type.END, s[1], s, ns, slope)
 
                 if USE_DEBUG:
                     e_start.other = e_end
