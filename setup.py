@@ -20,6 +20,7 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
+            'central_node = central_nav.central_node:main',
         ],
     },
 )
