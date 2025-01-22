@@ -6,7 +6,7 @@ from rclpy import qos
 
 import random
 
-from .poly_point_isect import isect_segments
+from .poly_point_isect import isect_segments_include_segments
 
 from geometry_msgs.msg import TransformStamped, Transform, Pose, Point
 from nav_msgs.msg import Path
@@ -90,12 +90,31 @@ class CentralNavigationNode(Node):
     
     def find_collisions(self):
         segments = []
-        for robot in self.robots.values():
+        robot_seg_idx: dict[str, tuple[int, int]] = dict() # robot: (start, count)
+        for robot_name in self.robots:
+            robot = self.robots[robot_name]
             path = robot.path
-            if path is not None: segments.extend(path) # add segments
+            if path is not None:
+                robot_seg_idx[robot_name] = (len(segments), len(path))
+                segments.extend(path) # add segments
 
-        self.collision_points = isect_segments(segments) # save collision points
-        
+        def robot_from_seg_idx(idx):
+            for robot_name in robot_seg_idx:
+                start, count = robot_seg_idx[robot_name]
+                if idx >= start and idx < start + count:
+                    return robot_name
+            
+            self.get_logger().error(f'cannot get robot corresponding to segment index {idx}')
+            return None
+
+        # save collision points
+        self.collision_points = []
+        for (point, segment_idxs) in isect_segments_include_segments(segments):
+            colliding_robots = set([robot_from_seg_idx(i) for i in segment_idxs])
+            if len(colliding_robots) > 1: # count number of robots in collision zone
+                self.get_logger().info(f'collision point at {point}: {colliding_robots}')
+                self.collision_points.append(point)
+
         self.publish_markers()
     
     def publish_markers(self):
