@@ -34,6 +34,13 @@ class Robot:
         self.colour.r, self.colour.g, self.colour.b = [random.random() for i in range(3)]
     
     @property
+    def position(self) -> tuple[float, float] | None:
+        if self.pose is not None:
+            return (self.pose.translation.x, self.pose.translation.y)
+        else:
+            return None
+
+    @property
     def has_pose(self) -> bool:
         return self.pose is not None
     
@@ -70,6 +77,9 @@ class Robot:
         marker.color = self.colour
         marker.frame_locked = True
         return marker
+    
+    def __repr__(self) -> str:
+        return f'Robot({self.position}, {len(self.waypoints)} wpt)'
 
 class Intersection:
     def __init__(self, position: tuple[float, float], occupant: str | None = None):
@@ -128,6 +138,9 @@ class Intersection:
             marker.color.g = 1.0
         marker.frame_locked = True
         return marker
+    
+    def __repr__(self) -> str:
+        return f'Intersection({self.position}, occupant: {self.occupant})'
 
 class CentralNavigationNode(Node):
     def __init__(self):
