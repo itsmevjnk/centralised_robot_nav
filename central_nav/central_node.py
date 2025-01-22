@@ -10,7 +10,7 @@ from .poly_point_isect import isect_segments
 
 from geometry_msgs.msg import TransformStamped, Transform, Pose, Point
 from nav_msgs.msg import Path
-from std_msgs.msg import String
+from std_msgs.msg import String, ColorRGBA
 from visualization_msgs.msg import MarkerArray, Marker
 
 IX_RADIUS = 0.2 # intersection radius in metres
@@ -26,6 +26,10 @@ class Robot:
             self.set_path(path, min_path_length)
         else:
             self.waypoints: list[tuple[float, float]] = []
+
+        # for marker representation
+        self.colour = ColorRGBA(a=1.0)
+        self.colour.r, self.colour.g, self.colour.b = [random.random() for i in range(3)]
     
     @property
     def has_pose(self) -> bool:
@@ -57,12 +61,12 @@ class CentralNavigationNode(Node):
         super().__init__('central_nav')
         
         self.markers_pub = self.create_publisher(MarkerArray, 'markers', qos.qos_profile_system_default)
-        self.pass_pub = self.create_publisher('pass', String, qos.qos_profile_system_default)
-        self.stop_pub = self.create_publisher('stop', String, qos.qos_profile_system_default)
+        self.pass_pub = self.create_publisher(String, 'robot_pass', qos.qos_profile_system_default)
+        self.stop_pub = self.create_publisher(String, 'robot_stop', qos.qos_profile_system_default)
 
         self.robots: dict[str, Robot] = dict()
-        self.create_subscription(TransformStamped, 'robot_poses', self.pose_cb)
-        self.create_subscription(Path, 'robot_paths', self.path_cb)
+        self.create_subscription(TransformStamped, 'robot_poses', self.pose_cb, qos.qos_profile_system_default)
+        self.create_subscription(Path, 'robot_paths', self.path_cb, qos.qos_profile_system_default)
 
         self.collision_points: list[tuple[float, float]] = []
 
@@ -79,15 +83,22 @@ class CentralNavigationNode(Node):
             self.robots[robot_name] = Robot(path=data)
         else:
             self.robots[robot_name].set_path(data)
+
+        self.get_logger().info(f'received path of robot {robot_name} with {len(self.robots[robot_name].waypoints)} waypoint(s)')
         
         self.find_collisions()
     
     def find_collisions(self):
         segments = []
-        for robot in self.robots.values(): segments.extend(robot.path()) # add segments
+        for robot in self.robots.values():
+            path = robot.path
+            if path is not None: segments.extend(path) # add segments
 
         self.collision_points = isect_segments(segments) # save collision points
         
+        self.publish_markers()
+    
+    def publish_markers(self):
         markers = [Marker(action=Marker.DELETEALL)] # delete all markers
         # send collision points out for visualisation
         for point in self.collision_points:
@@ -97,9 +108,10 @@ class CentralNavigationNode(Node):
             marker.type = Marker.CYLINDER
             marker.pose.position.x, marker.pose.position.y = point
             marker.pose.orientation.w = 1.0
-            marker.scale.x = marker.scale.y = IX_RADIUS * 2; marker.scale.z = 0.1
+            marker.scale.x = marker.scale.y = IX_RADIUS * 2; marker.scale.z = 0.01
             marker.color.r = 1.0; marker.color.a = 1.0
             marker.frame_locked = True
+            marker.id = len(markers)
             markers.append(marker)
         # send paths out
         for robot in self.robots.values():
@@ -108,11 +120,12 @@ class CentralNavigationNode(Node):
             marker.header.frame_id = 'map'
             marker.type = Marker.LINE_STRIP
             marker.points = [Point(x=x, y=y) for (x, y) in robot.waypoints]
-            marker.scale.x = 0.1
-            marker.color.r, marker.color.g, marker.color.b = [random.random() for i in range(3)]; marker.color.a = 1.0
+            marker.scale.x = 0.01
+            marker.color = robot.colour
             marker.frame_locked = True
+            marker.id = len(markers)
             markers.append(marker)
-        self.markers_pub.publish(MarkerArray(markers))
+        self.markers_pub.publish(MarkerArray(markers=markers))
 
 def main():
     rclpy.init()
