@@ -8,3 +8,9 @@ topics:
   robot_paths:
     type: nav_msgs/msg/Path
     bidirectional: true
+  robot_pass:
+    type: std_msgs/msg/String
+    reversed: True
+  robot_stop:
+    type: std_msgs/msg/String
+    reversed: True

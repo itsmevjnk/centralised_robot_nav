@@ -21,6 +21,7 @@
         <param name="robot_name" value="$(var name)" />
         <remap from="path_in" to="/plan" />
         <remap from="path_out" to="/robot_paths" />
+        <!-- <param name="use_sim_time" value="$(var use_sim_time)" /> -->
     </node>
 
     <include file="$(find-pkg-share domain_bridge)/launch/domain_bridge.launch.xml">
@@ -28,4 +29,12 @@
         <arg name="from_domain" value="$(env ROS_DOMAIN_ID 0)" />
         <arg name="to_domain" value="$(var domain)" />
     </include>
+
+    <node pkg="nav2_goal_cancel" exec="string_node" name="goal_cancel_$(var name)">
+        <param name="robot_name" value="$(var name)" />
+        <param name="use_sim_time" value="$(var use_sim_time)" />
+
+        <remap from="pass" to="/robot_pass"/>
+        <remap from="stop" to="/robot_stop"/>
+    </node>
 </launch>
