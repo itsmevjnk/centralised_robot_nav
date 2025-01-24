@@ -9,18 +9,14 @@
         <remap from="robot_paths" to="/robot_paths"/>
         <remap from="robot_pass" to="/robot_pass"/>
         <remap from="robot_stop" to="/robot_stop"/>
+        <remap from="robot_markers" to="/robot_markers"/>
+        <remap from="path_markers" to="/path_markers"/>
         <param name="use_sim_time" value="$(var use_sim_time)"/>    
     </node>
 
     <!-- VISUALISATION -->
 
     <group if="$(var rviz)">
-        <node pkg="pose_publisher" exec="tf_node" name="pose_to_tf">
-            <remap from="pose" to="/robot_poses" />
-            <remap from="pose_cloud" to="/obstacle_cloud" />
-            <param name="use_sim_time" value="$(var use_sim_time)" />
-        </node>
-
         <group if="$(eval '\'$(var map)\' != \'\'')">
             <node pkg="nav2_map_server" exec="map_server" name="map_server">
                 <param name="yaml_filename" value="$(var map)" />

@@ -70,9 +70,9 @@ class Intersection:
         marker.scale.x = marker.scale.y = IX_RADIUS * 2; marker.scale.z = 0.01
         marker.color.a = 1.0
         if self.occupied:
-            marker.color.r = 1.0
+            marker.color.r = 0.5
         else:
-            marker.color.g = 1.0
+            marker.color.g = 0.5
         marker.frame_locked = True
         return marker
     
@@ -94,6 +94,8 @@ class Robot:
         # for marker representation
         self.colour = ColorRGBA(a=1.0)
         self.colour.r, self.colour.g, self.colour.b = [random.random() for i in range(3)]
+
+        self.move = True # for visualisation
     
     @property
     def position(self) -> tuple[float, float] | None:
@@ -128,7 +130,7 @@ class Robot:
         return [(self.waypoints[i], self.waypoints[i + 1]) for i in range(len(self.waypoints) - 1)] # connect points together into segments
     
     @property
-    def marker(self) -> Marker:
+    def path_marker(self) -> Marker:
         marker = Marker()
         # marker.header.stamp = self.get_clock().now().to_msg()
         marker.header.frame_id = 'map'
@@ -137,6 +139,23 @@ class Robot:
         marker.pose.orientation.w = 1.0
         marker.scale.x = 0.01
         marker.color = self.colour
+        marker.frame_locked = True
+        return marker
+    
+    @property
+    def robot_marker(self) -> Marker:
+        marker = Marker()
+        # marker.header.stamp = self.get_clock().now().to_msg()
+        marker.header.frame_id = 'map'
+        marker.type = Marker.ARROW
+        marker.pose.position.x = self.pose.translation.x
+        marker.pose.position.y = self.pose.translation.y
+        marker.pose.position.z = self.pose.translation.z
+        marker.pose.orientation = self.pose.rotation
+        marker.scale.x = 0.25; marker.scale.y = marker.scale.z = 0.05
+        marker.color.a = 1.0
+        if self.move: marker.color.g = 1.0
+        else: marker.color.r = 1.0
         marker.frame_locked = True
         return marker
     
@@ -150,7 +169,8 @@ class CentralNavigationNode(Node):
     def __init__(self):
         super().__init__('central_nav')
         
-        self.markers_pub = self.create_publisher(MarkerArray, 'markers', qos.qos_profile_system_default)
+        self.path_markers_pub = self.create_publisher(MarkerArray, 'path_markers', qos.qos_profile_system_default)
+        self.robot_markers_pub = self.create_publisher(MarkerArray, 'robot_markers', qos.qos_profile_system_default)
         self.pass_pub = self.create_publisher(String, 'robot_pass', qos.qos_profile_system_default)
         self.stop_pub = self.create_publisher(String, 'robot_stop', qos.qos_profile_system_default)
 
@@ -168,27 +188,41 @@ class CentralNavigationNode(Node):
             self.robots[robot_name].set_pose(data)
 
         self.check_intersections()
+        self.publish_robot_markers()
     
     def check_intersections(self):
         for robot_name in self.robots:
             robot = self.robots[robot_name]
             move = True
+            stop_ixes = []
             for ix in self.intersections: # go through intersections
                 if robot.in_intersection(ix): # entering
                     if not ix.can_enter(robot_name):
                         move = False # cannot enter - stop now
+                        stop_ixes.append(ix)
                     else:
                         ix.enter(robot_name) # enter intersection
                 else: # leaving
                     ix.leave(robot_name)
             
             # command robot to move or stop
-            self.get_logger().info(f'commanding robot {robot_name} to ' + ('move' if move else 'STOP'))
+            if robot.move != move:
+                self.get_logger().info(f'commanding robot {robot_name} to ' + ('move' if move else f'STOP (against intersection(s) {stop_ixes})')) # avoid polluting logs
             msg = String(data=robot_name)
             if move:
                 self.pass_pub.publish(msg)
             else:
                 self.stop_pub.publish(msg)
+            robot.move = move # for visualisation
+    
+    def publish_robot_markers(self):
+        markers = [Marker(action=Marker.DELETEALL)] # delete all markers
+        for robot in self.robots.values():
+            marker = robot.robot_marker
+            marker.header.stamp = self.get_clock().now().to_msg()
+            marker.id = len(markers)
+            markers.append(marker)
+        self.robot_markers_pub.publish(MarkerArray(markers=markers))
 
     def path_cb(self, data: Path):
         robot_name = data.header.frame_id # reused field, not up to spec
@@ -197,8 +231,7 @@ class CentralNavigationNode(Node):
         else:
             self.robots[robot_name].set_path(data)
 
-        self.get_logger().info(f'received path of robot {robot_name} with {len(self.robots[robot_name].waypoints)} waypoint(s)')
-        
+        # self.get_logger().info(f'received path of robot {robot_name} with {len(self.robots[robot_name].waypoints)} waypoint(s)')
         self.find_intersections()
     
     def find_intersections(self):
@@ -225,7 +258,7 @@ class CentralNavigationNode(Node):
         for (point, segment_idxs) in isect_segments_include_segments(segments):
             colliding_robots = set([robot_from_seg_idx(i) for i in segment_idxs])
             if len(colliding_robots) > 1: # count number of robots in collision zone
-                self.get_logger().info(f'intersection at {point}: {colliding_robots}')
+                # self.get_logger().info(f'intersection at {point}: {colliding_robots}')
                 intersections.append(Intersection(point))
 
         # migrate intersections
@@ -239,9 +272,9 @@ class CentralNavigationNode(Node):
                     ix.occupant = old_ix.occupant if self.robots[old_ix.occupant].in_intersection(ix) else None # existing robot in intersection gets priority (since it's moving already) - TODO
         self.intersections = intersections
 
-        self.publish_markers()
+        self.publish_path_markers()
     
-    def publish_markers(self):
+    def publish_path_markers(self):
         markers = [Marker(action=Marker.DELETEALL)] # delete all markers
         # send collision points out for visualisation
         for point in self.intersections:
@@ -251,11 +284,11 @@ class CentralNavigationNode(Node):
             markers.append(marker)
         # send paths out
         for robot in self.robots.values():
-            marker = robot.marker
+            marker = robot.path_marker
             marker.header.stamp = self.get_clock().now().to_msg()
             marker.id = len(markers)
             markers.append(marker)
-        self.markers_pub.publish(MarkerArray(markers=markers))
+        self.path_markers_pub.publish(MarkerArray(markers=markers))
 
 def main():
     rclpy.init()
