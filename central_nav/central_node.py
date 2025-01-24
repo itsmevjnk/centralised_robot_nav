@@ -13,7 +13,10 @@ from nav_msgs.msg import Path
 from std_msgs.msg import String, ColorRGBA
 from visualization_msgs.msg import MarkerArray, Marker
 
-from typing_extensions import Self
+try:
+    from typing import Self
+except ImportError: # <= Python 3.10
+    Self = object
 
 IX_RADIUS = 0.3 # intersection radius in metres
 
