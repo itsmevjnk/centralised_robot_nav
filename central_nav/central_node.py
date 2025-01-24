@@ -217,9 +217,10 @@ class CentralNavigationNode(Node):
     
     def publish_robot_markers(self):
         markers = [Marker(action=Marker.DELETEALL)] # delete all markers
+        stamp = self.get_clock().now().to_msg()
         for robot in self.robots.values():
             marker = robot.robot_marker
-            marker.header.stamp = self.get_clock().now().to_msg()
+            marker.header.stamp = stamp
             marker.id = len(markers)
             markers.append(marker)
         self.robot_markers_pub.publish(MarkerArray(markers=markers))
@@ -276,16 +277,17 @@ class CentralNavigationNode(Node):
     
     def publish_path_markers(self):
         markers = [Marker(action=Marker.DELETEALL)] # delete all markers
+        stamp = self.get_clock().now().to_msg()
         # send collision points out for visualisation
         for point in self.intersections:
             marker = point.marker
-            marker.header.stamp = self.get_clock().now().to_msg()
+            marker.header.stamp = stamp
             marker.id = len(markers)
             markers.append(marker)
         # send paths out
         for robot in self.robots.values():
             marker = robot.path_marker
-            marker.header.stamp = self.get_clock().now().to_msg()
+            marker.header.stamp = stamp
             marker.id = len(markers)
             markers.append(marker)
         self.path_markers_pub.publish(MarkerArray(markers=markers))
