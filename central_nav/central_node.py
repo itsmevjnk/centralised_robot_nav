@@ -13,12 +13,18 @@ from nav_msgs.msg import Path
 from std_msgs.msg import String, ColorRGBA
 from visualization_msgs.msg import MarkerArray, Marker
 
+import numpy as np
+from sklearn.cluster import DBSCAN
+
 try:
     from typing import Self
 except ImportError: # <= Python 3.10
     Self = object
 
 IX_RADIUS = 0.3 # intersection radius in metres
+
+IX_MIN_DIST = 0.05 # minimum distance between intersections
+IX_MIN_SAMPLES = 1 # minimum number of samples to form a cluster (Copilot said 2, but let's try 1 for now)
 
 class Intersection:
     def __init__(self, position: tuple[float, float], occupant: str | None = None):
@@ -262,6 +268,8 @@ class CentralNavigationNode(Node):
                 # self.get_logger().info(f'intersection at {point}: {colliding_robots}')
                 intersections.append(Intersection(point))
 
+        intersections = self.cluster_intersections(intersections) # filter intersections
+
         # migrate intersections
         old_intersections = filter(lambda ix: ix.occupied, self.intersections) # only consider occupied intersections
         for ix in intersections:
@@ -275,6 +283,34 @@ class CentralNavigationNode(Node):
 
         self.publish_path_markers()
     
+    def cluster_intersections(self, intersections: list[Intersection]) -> list[Intersection]: # DBSCAN clustering
+        if len(intersections) == 0: return intersections # no intersections to cluster
+
+        positions = np.array([ix.position for ix in intersections])
+        algo = DBSCAN(eps=IX_MIN_DIST, min_samples=IX_MIN_SAMPLES)
+        labels = algo.fit_predict(positions).tolist()
+
+        output: list[Intersection] = []
+
+        # group intersections by labels
+        unique_labels = set(labels)
+        ix_labels: dict[int, Intersection] = dict()
+        for label in unique_labels:
+            label_ixs = [
+                intersections[i]
+                for i in range(len(intersections))
+                if labels[i] == -1
+            ] # intersections with this label
+            if label == -1: # noise - we'll still include it anyway
+                output.extend(label_ixs)
+            else: # not noise - take mean of their positions
+                mean_pos = np.mean([ix.position for ix in label_ixs], axis=0).tolist()
+                self.get_logger().info(f'mean position: {mean_pos} (positions: {[ix.position for ix in label_ixs]})')
+                output.append(Intersection(tuple(mean_pos)))
+        
+        return output
+
+
     def publish_path_markers(self):
         markers = [Marker(action=Marker.DELETEALL)] # delete all markers
         stamp = self.get_clock().now().to_msg()
