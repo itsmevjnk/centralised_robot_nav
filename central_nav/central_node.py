@@ -284,7 +284,7 @@ class CentralNavigationNode(Node):
         self.publish_path_markers()
     
     def cluster_intersections(self, intersections: list[Intersection]) -> list[Intersection]: # DBSCAN clustering
-        if len(intersections) == 0: return intersections # no intersections to cluster
+        if len(intersections) < 2: return intersections # no intersections to cluster
 
         positions = np.array([ix.position for ix in intersections])
         algo = DBSCAN(eps=IX_MIN_DIST, min_samples=IX_MIN_SAMPLES)
@@ -299,13 +299,14 @@ class CentralNavigationNode(Node):
             label_ixs = [
                 intersections[i]
                 for i in range(len(intersections))
-                if labels[i] == -1
+                if labels[i] == label
             ] # intersections with this label
+            # self.get_logger().info(f'label {label}: {label_ixs}')
             if label == -1: # noise - we'll still include it anyway
                 output.extend(label_ixs)
             else: # not noise - take mean of their positions
                 mean_pos = np.mean([ix.position for ix in label_ixs], axis=0).tolist()
-                self.get_logger().info(f'mean position: {mean_pos} (positions: {[ix.position for ix in label_ixs]})')
+                # self.get_logger().info(f'mean position: {mean_pos} (positions: {[ix.position for ix in label_ixs]})')
                 output.append(Intersection(tuple(mean_pos)))
         
         return output
