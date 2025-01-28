@@ -169,7 +169,7 @@ class Robot:
         return f'Robot({self.position}, {len(self.waypoints)} wpt)'
     
     def in_intersection(self, ix: Intersection) -> bool:
-        return ix.distance(self.position) <= 2 * IX_RADIUS
+        return ix.distance(self.position) <= IX_RADIUS
 
 class CentralNavigationNode(Node):
     def __init__(self):
