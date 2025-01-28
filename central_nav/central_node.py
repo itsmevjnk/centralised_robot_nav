@@ -236,6 +236,9 @@ class CentralNavigationNode(Node):
         if robot_name not in self.robots:
             self.robots[robot_name] = Robot(path=data)
         else:
+            if not self.robots[robot_name].move and len(data.poses) == 0: # empty path sent out while the robot is commanded to stop - goal cancellation
+                self.get_logger().info(f'ignoring empty path caused by goal cancellation')
+                return
             self.robots[robot_name].set_path(data)
 
         # self.get_logger().info(f'received path of robot {robot_name} with {len(self.robots[robot_name].waypoints)} waypoint(s)')
