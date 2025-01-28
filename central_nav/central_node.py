@@ -21,10 +21,10 @@ try:
 except ImportError: # <= Python 3.10
     Self = object
 
-IX_RADIUS = 0.3 # intersection radius in metres
+IX_RADIUS = 0.6 # intersection radius in metres
 
-IX_MIN_DIST = 0.05 # minimum distance between intersections
-IX_MIN_SAMPLES = 1 # minimum number of samples to form a cluster (Copilot said 2, but let's try 1 for now)
+IX_MIN_DIST = IX_RADIUS # minimum distance between intersections
+IX_MIN_SAMPLES = 2 # minimum number of samples to form a cluster (Copilot said 2, but let's try 1 for now)
 
 class Intersection:
     def __init__(self, position: tuple[float, float], occupant: str | None = None):
