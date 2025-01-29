@@ -4,6 +4,8 @@
     <arg name="rviz" default="true"/>
     <arg name="map" default=""/>
 
+    <arg name="oneshot" default="false"/> <!-- disregard path updates unless navigation is restarted -->
+
     <node name="central_node" pkg="central_nav" exec="central_node" output="screen">
         <remap from="robot_poses" to="/robot_poses"/>
         <remap from="robot_paths" to="/robot_paths"/>
@@ -11,7 +13,9 @@
         <remap from="robot_stop" to="/robot_stop"/>
         <remap from="robot_markers" to="/robot_markers"/>
         <remap from="path_markers" to="/path_markers"/>
-        <param name="use_sim_time" value="$(var use_sim_time)"/>    
+        <remap from="ix_markers" to="/ix_markers"/>
+        <param name="use_sim_time" value="$(var use_sim_time)"/>
+        <param name="oneshot" value="$(var oneshot)"/>    
     </node>
 
     <!-- VISUALISATION -->

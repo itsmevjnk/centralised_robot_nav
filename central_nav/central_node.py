@@ -102,6 +102,7 @@ class Robot:
         self.colour.r, self.colour.g, self.colour.b = [random.random() for i in range(3)]
 
         self.move = True # for visualisation
+        self.accept_path = True
     
     @property
     def position(self) -> tuple[float, float] | None:
@@ -177,12 +178,16 @@ class CentralNavigationNode(Node):
         
         self.path_markers_pub = self.create_publisher(MarkerArray, 'path_markers', qos.qos_profile_system_default)
         self.robot_markers_pub = self.create_publisher(MarkerArray, 'robot_markers', qos.qos_profile_system_default)
+        self.ix_markers_pub = self.create_publisher(MarkerArray, 'ix_markers', qos.qos_profile_system_default)
+
         self.pass_pub = self.create_publisher(String, 'robot_pass', qos.qos_profile_system_default)
         self.stop_pub = self.create_publisher(String, 'robot_stop', qos.qos_profile_system_default)
 
         self.robots: dict[str, Robot] = dict()
         self.create_subscription(TransformStamped, 'robot_poses', self.pose_cb, qos.qos_profile_system_default)
         self.create_subscription(Path, 'robot_paths', self.path_cb, qos.qos_profile_system_default)
+
+        self.path_oneshot = self.declare_parameter('oneshot', False).get_parameter_value().bool_value
 
         self.intersections: list[Intersection] = []
 
@@ -221,6 +226,8 @@ class CentralNavigationNode(Node):
                 self.stop_pub.publish(msg)
             robot.move = move # for visualisation
     
+        self.publish_ix_markers()
+
     def publish_robot_markers(self):
         markers = [Marker(action=Marker.DELETEALL)] # delete all markers
         stamp = self.get_clock().now().to_msg()
@@ -231,6 +238,17 @@ class CentralNavigationNode(Node):
             markers.append(marker)
         self.robot_markers_pub.publish(MarkerArray(markers=markers))
 
+    def publish_ix_markers(self):
+        markers = [Marker(action=Marker.DELETEALL)] # delete all markers
+        stamp = self.get_clock().now().to_msg()
+        # send collision points out for visualisation
+        for point in self.intersections:
+            marker = point.marker
+            marker.header.stamp = stamp
+            marker.id = len(markers)
+            markers.append(marker)
+        self.ix_markers_pub.publish(MarkerArray(markers=markers))
+
     def path_cb(self, data: Path):
         robot_name = data.header.frame_id # reused field, not up to spec
         if robot_name not in self.robots:
@@ -238,10 +256,15 @@ class CentralNavigationNode(Node):
         else:
             if not self.robots[robot_name].move and len(data.poses) == 0: # empty path sent out while the robot is commanded to stop - goal cancellation
                 self.get_logger().info(f'ignoring empty path caused by goal cancellation')
+                self.robots[robot_name].accept_path = True # so we accept the next path
+                return
+            if self.path_oneshot and not self.robots[robot_name].accept_path:
                 return
             self.robots[robot_name].set_path(data)
+            self.robots[robot_name].accept_path = False
 
         # self.get_logger().info(f'received path of robot {robot_name} with {len(self.robots[robot_name].waypoints)} waypoint(s)')
+        self.robots[robot_name].accept_path = False
         self.find_intersections()
     
     def find_intersections(self):
@@ -314,16 +337,9 @@ class CentralNavigationNode(Node):
         
         return output
 
-
     def publish_path_markers(self):
         markers = [Marker(action=Marker.DELETEALL)] # delete all markers
         stamp = self.get_clock().now().to_msg()
-        # send collision points out for visualisation
-        for point in self.intersections:
-            marker = point.marker
-            marker.header.stamp = stamp
-            marker.id = len(markers)
-            markers.append(marker)
         # send paths out
         for robot in self.robots.values():
             marker = robot.path_marker
