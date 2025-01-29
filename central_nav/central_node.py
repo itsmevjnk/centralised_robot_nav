@@ -7,6 +7,7 @@ from rclpy import qos
 import random
 
 from .poly_point_isect import isect_segments_include_segments
+from .frechetdist import frdist
 
 from geometry_msgs.msg import TransformStamped, Transform, Pose, Point
 from nav_msgs.msg import Path
@@ -122,14 +123,19 @@ class Robot:
     def set_pose(self, data: TransformStamped):
         self.pose = data.transform
     
-    def set_path(self, data: Path, min_length: float = 0.05):
-        self.waypoints = [] # clear out list of waypoints
+    @staticmethod
+    def path_to_waypoints(data: Path, min_length: float = 0.05) -> list[tuple[float, float]]:
+        waypoints = []
         for pose in data.poses:
             pose: Pose = pose.pose
             point = (pose.position.x, pose.position.y) # point
-            if len(self.waypoints) > 0:
-                if ((point[0] - self.waypoints[-1][0])**2 + (point[1] - self.waypoints[-1][1])**2)**0.5 < min_length: continue # too short
-            self.waypoints.append(point) # otherwise add our point in
+            if len(waypoints) > 0:
+                if ((point[0] - waypoints[-1][0])**2 + (point[1] - waypoints[-1][1])**2)**0.5 < min_length: continue # too short
+            waypoints.append(point) # otherwise add our point in
+        return waypoints
+
+    def set_path(self, data: Path, min_length: float = 0.05):
+        self.waypoints = Robot.path_to_waypoints(data, min_length)
 
     @property
     def path(self) -> list[tuple[tuple[float, float], tuple[float, float]]]:
@@ -258,9 +264,12 @@ class CentralNavigationNode(Node):
                 self.get_logger().info(f'ignoring empty path caused by goal cancellation')
                 self.robots[robot_name].accept_path = True # so we accept the next path
                 return
+            new_waypoints = Robot.path_to_waypoints(data)
+            if len(self.robots[robot_name].waypoints) > 1 and len(new_waypoints) > 1:
+                self.get_logger().info(f'{robot_name}: Frechet distance of new path = {frdist(self.robots[robot_name].waypoints, new_waypoints)}')
             if self.path_oneshot and not self.robots[robot_name].accept_path:
                 return
-            self.robots[robot_name].set_path(data)
+            self.robots[robot_name].waypoints = new_waypoints
             self.robots[robot_name].accept_path = False
 
         # self.get_logger().info(f'received path of robot {robot_name} with {len(self.robots[robot_name].waypoints)} waypoint(s)')
