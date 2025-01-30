@@ -260,17 +260,18 @@ class CentralNavigationNode(Node):
         if robot_name not in self.robots:
             self.robots[robot_name] = Robot(path=data)
         else:
-            if not self.robots[robot_name].move and len(data.poses) == 0: # empty path sent out while the robot is commanded to stop - goal cancellation
+            robot = self.robots[robot_name]
+            if not robot.move and len(data.poses) == 0: # empty path sent out while the robot is commanded to stop - goal cancellation
                 self.get_logger().info(f'ignoring empty path caused by goal cancellation')
-                self.robots[robot_name].accept_path = True # so we accept the next path
+                robot.accept_path = True # so we accept the next path
                 return
             new_waypoints = Robot.path_to_waypoints(data)
-            if len(self.robots[robot_name].waypoints) > 1 and len(new_waypoints) > 1:
-                self.get_logger().info(f'{robot_name}: Frechet distance of new path = {frdist(self.robots[robot_name].waypoints, new_waypoints)}')
-            if self.path_oneshot and not self.robots[robot_name].accept_path:
+            if len(robot.waypoints) > 1 and len(new_waypoints) > 1:
+                self.get_logger().info(f'{robot_name}: Frechet distance of new path = {frdist(robot.waypoints, new_waypoints)}')
+            if self.path_oneshot and not robot.accept_path:
                 return
-            self.robots[robot_name].waypoints = new_waypoints
-            self.robots[robot_name].accept_path = False
+            robot.waypoints = new_waypoints
+            robot.accept_path = False
 
         # self.get_logger().info(f'received path of robot {robot_name} with {len(self.robots[robot_name].waypoints)} waypoint(s)')
         self.robots[robot_name].accept_path = False
