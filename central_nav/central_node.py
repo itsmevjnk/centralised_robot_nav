@@ -29,6 +29,8 @@ IX_RADIUS = 0.6 # intersection radius in metres
 IX_MIN_DIST = IX_RADIUS # minimum distance between intersections
 IX_MIN_SAMPLES = 2 # minimum number of samples to form a cluster (Copilot said 2, but let's try 1 for now)
 
+DF_MAX = 0.5 # maximum Frechet distance to treat two paths as the same
+
 class Intersection:
     def __init__(self, position: tuple[float, float], occupant: str | None = None):
         self.position = position
@@ -241,7 +243,7 @@ class CentralNavigationNode(Node):
         else:
             self.robots[robot_name].set_pose(data)
 
-        self.get_logger().info(f'{robot_name} next waypoint index is {self.robots[robot_name].next_wpt}')
+        # self.get_logger().info(f'{robot_name} next waypoint index is {self.robots[robot_name].next_wpt}')
 
         self.check_intersections()
         self.publish_robot_markers()
@@ -312,8 +314,12 @@ class CentralNavigationNode(Node):
             else:
                 new_waypoints = Robot.path_to_waypoints(data)
                 self.publish_raw_path_markers(robot_name, new_waypoints)
-                if len(robot.waypoints) > 1 and len(new_waypoints) > 1:
-                    self.get_logger().info(f'{robot_name}: Frechet distance of new path = {frdist(robot.waypoints[max(0, robot.next_wpt - 1):], new_waypoints)}')
+                if len(robot.waypoints) > 1 and len(new_waypoints) > 1: # calculate Frechet distance
+                    df = frdist(robot.waypoints[max(0, robot.next_wpt - 1):], new_waypoints)
+                    self.get_logger().info(f'{robot_name}: Frechet distance of new path = {df}')
+                    if df <= DF_MAX: # do not update path if distance is low
+                        return
+
                 if self.path_oneshot and not robot.accept_path:
                     return
                 robot.waypoints = new_waypoints
