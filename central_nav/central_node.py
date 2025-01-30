@@ -6,6 +6,8 @@ from rclpy import qos
 
 import random
 
+import rclpy.publisher
+
 from .poly_point_isect import isect_segments_include_segments
 from .frechetdist import frdist
 
@@ -168,18 +170,22 @@ class Robot:
         if len(self.waypoints) < 2: return None
         return [(self.waypoints[i], self.waypoints[i + 1]) for i in range(len(self.waypoints) - 1)] # connect points together into segments
     
-    @property
-    def path_marker(self) -> Marker:
+    @staticmethod
+    def waypoints_to_marker(waypoints: list[tuple[float, float]], scale: float = 0.01, colour: ColorRGBA | None = None) -> Marker:
         marker = Marker()
         # marker.header.stamp = self.get_clock().now().to_msg()
         marker.header.frame_id = 'map'
         marker.type = Marker.LINE_STRIP
-        marker.points = [Point(x=x, y=y) for (x, y) in self.waypoints]
+        marker.points = [Point(x=x, y=y) for (x, y) in waypoints]
         marker.pose.orientation.w = 1.0
-        marker.scale.x = 0.01
-        marker.color = self.colour
+        marker.scale.x = scale
+        if colour is not None: marker.color = colour
         marker.frame_locked = True
         return marker
+
+    @property
+    def path_marker(self) -> Marker:
+        return Robot.waypoints_to_marker(self.waypoints, scale=0.02)
     
     @property
     def robot_marker(self) -> Marker:
@@ -208,6 +214,7 @@ class CentralNavigationNode(Node):
     def __init__(self):
         super().__init__('central_nav')
         
+        self.raw_path_markers_pub = self.create_publisher(MarkerArray, 'raw_path_markers', qos.qos_profile_system_default)
         self.path_markers_pub = self.create_publisher(MarkerArray, 'path_markers', qos.qos_profile_system_default)
         self.robot_markers_pub = self.create_publisher(MarkerArray, 'robot_markers', qos.qos_profile_system_default)
         self.ix_markers_pub = self.create_publisher(MarkerArray, 'ix_markers', qos.qos_profile_system_default)
@@ -300,6 +307,7 @@ class CentralNavigationNode(Node):
                     # return
             else:
                 new_waypoints = Robot.path_to_waypoints(data)
+                self.publish_raw_path_markers(robot_name, new_waypoints)
                 if len(robot.waypoints) > 1 and len(new_waypoints) > 1:
                     self.get_logger().info(f'{robot_name}: Frechet distance of new path = {frdist(robot.waypoints[max(0, robot.next_wpt - 1):], new_waypoints)}')
                 if self.path_oneshot and not robot.accept_path:
@@ -311,7 +319,47 @@ class CentralNavigationNode(Node):
         # self.get_logger().info(f'received path of robot {robot_name} with {len(self.robots[robot_name].waypoints)} waypoint(s)')
         self.robots[robot_name].accept_path = len(robot.waypoints) < 2 # if we have less than 2 waypoints, we'll want to get new path
         self.find_intersections()
+        self.publish_path_markers(robot_name) # only update for this robot
     
+    def publish_path_markers(self, robot: str | None = None):
+        markers = []
+
+        def make_marker(robot_name):
+            robot = self.robots[robot_name]
+            markers.extend(self.publish_path_stub(robot.waypoints, len(markers), 0.02, robot.colour, robot_name))
+
+        if robot is not None:
+            if robot not in self.robots:
+                self.get_logger().error(f'cannot publish path marker for nonexistent robot {robot}')
+                return
+            make_marker(robot)
+        else:
+            for robot in self.robots:
+                make_marker(robot)
+
+        self.path_markers_pub.publish(MarkerArray(markers=markers))
+
+    def publish_raw_path_markers(self, robot_name: str, waypoints: list[tuple[float, float]]):
+        self.raw_path_markers_pub.publish(MarkerArray(markers=self.publish_path_stub(
+            waypoints, ns=robot_name,
+            colour=ColorRGBA(
+                r = 1.0 - self.robots[robot_name].colour.r,
+                g = 1.0 - self.robots[robot_name].colour.g,
+                b = 1.0 - self.robots[robot_name].colour.b,
+                a = 1.0
+            )
+        )))
+
+    def publish_path_stub(self, waypoints: list[tuple[float, float]], id: int = 0, scale: float = 0.01, colour: ColorRGBA | None = None, ns: str = '') -> list[Marker]:
+        marker = Robot.waypoints_to_marker(waypoints, scale, colour)
+        marker.id = id + 1
+        marker.ns = ns
+
+        return [
+            Marker(action=Marker.DELETEALL, ns=ns, id=id),
+            marker
+        ]
+
     def find_intersections(self):
         segments = []
         robot_seg_idx: dict[str, tuple[int, int]] = dict() # robot: (start, count)
@@ -351,8 +399,6 @@ class CentralNavigationNode(Node):
                 if ix_dist <= 2 * IX_RADIUS: # intersections overlap
                     ix.occupant = old_ix.occupant if self.robots[old_ix.occupant].in_intersection(ix) else None # existing robot in intersection gets priority (since it's moving already) - TODO
         self.intersections = intersections
-
-        self.publish_path_markers()
     
     def cluster_intersections(self, intersections: list[Intersection]) -> list[Intersection]: # DBSCAN clustering
         if len(intersections) < 2: return intersections # no intersections to cluster
@@ -381,17 +427,6 @@ class CentralNavigationNode(Node):
                 output.append(Intersection(tuple(mean_pos)))
         
         return output
-
-    def publish_path_markers(self):
-        markers = [Marker(action=Marker.DELETEALL)] # delete all markers
-        stamp = self.get_clock().now().to_msg()
-        # send paths out
-        for robot in self.robots.values():
-            marker = robot.path_marker
-            marker.header.stamp = stamp
-            marker.id = len(markers)
-            markers.append(marker)
-        self.path_markers_pub.publish(MarkerArray(markers=markers))
 
 def main():
     rclpy.init()
