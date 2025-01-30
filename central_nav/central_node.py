@@ -210,6 +210,10 @@ class Robot:
     def in_intersection(self, ix: Intersection) -> bool:
         return ix.distance(self.position) <= IX_RADIUS
 
+    def clear_path(self):
+        self.waypoints = []
+        self.next_wpt = 0
+
 class CentralNavigationNode(Node):
     def __init__(self):
         super().__init__('central_nav')
@@ -303,7 +307,7 @@ class CentralNavigationNode(Node):
                     return
                 else:
                     self.get_logger().info(f'{robot_name} navigation ended')
-                    robot.waypoints = []; robot.next_wpt = 0
+                    robot.clear_path()
                     # return
             else:
                 new_waypoints = Robot.path_to_waypoints(data)
