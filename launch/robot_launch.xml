@@ -26,8 +26,13 @@
         <param name="use_sim_time" value="$(var use_sim_time)" />
     </node>
 
+    <let name="domain_bridge_config" value="$(find-pkg-share central_nav)/config/bridge_config.yml"/>
+    <group scoped="false" unless="$(var publish_pose)">
+        <let name="domain_bridge_config" value="$(find-pkg-share central_nav)/config/nopose_bridge_config.yml"/>
+    </group>
+
     <include file="$(find-pkg-share domain_bridge)/launch/domain_bridge.launch.xml">
-        <arg name="config" value="$(find-pkg-share central_nav)/config/bridge_config.yml"/>
+        <arg name="config" value="$(var domain_bridge_config)"/>
         <arg name="from_domain" value="$(env ROS_DOMAIN_ID 0)" />
         <arg name="to_domain" value="$(var domain)" />
     </include>
