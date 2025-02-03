@@ -7,7 +7,8 @@
 
     <arg name="use_sim_time" default="false" />
 
-    <node pkg="pose_publisher" exec="pub_node" name="pose_pub_$(var name)">
+    <arg name="publish_pose" default="true" />
+    <node pkg="pose_publisher" exec="pub_node" name="pose_pub_$(var name)" if="$(var publish_pose)">
         <param name="map_frame" value="$(var map_frame)" />
         <param name="robot_frame" value="$(var robot_frame)" />
         <param name="out_map_frame" value="$(var map_frame)" />
