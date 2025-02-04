@@ -30,7 +30,8 @@ setup(
             'central_node = central_nav.central_node:main',
             'path_pub_node = central_nav.path_pub_node:main',
             'cmdvel_telemetry_node = central_nav.cmdvel_telemetry_node:main',
-            'pose_telemetry_node = central_nav.pose_telemetry_node:main'
+            'pose_telemetry_node = central_nav.pose_telemetry_node:main',
+            'state_telemetry_node = central_nav.state_telemetry_node:main'
         ],
     },
 )

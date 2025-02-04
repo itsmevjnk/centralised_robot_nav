@@ -52,4 +52,10 @@
         <remap from="cmd_vel" to="/cmd_vel" />
         <param name="use_sim_time" value="$(var use_sim_time)" />
     </node>
+
+    <node pkg="central_nav" exec="state_telemetry_node" name="state_telemetry_$(var name)" if="$(var telemetry)">
+        <param name="robot_name" value="$(var name)" />
+        <param name="use_sim_time" value="$(var use_sim_time)" />
+        <remap from="goal_status" to="/navigate_to_pose/_action/status" />
+    </node>
 </launch>
