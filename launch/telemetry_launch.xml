@@ -1,0 +1,10 @@
+<launch>
+    <arg name="use_sim_time" default="false" />
+
+    <!-- COLLISION TELEMETRY -->
+    <node name="pose_telemetry" pkg="central_nav" exec="pose_telemetry_node" output="screen">
+        <remap from="robot_poses" to="/robot_poses"/>
+        <remap from="telemetry" to="/telemetry"/>
+        <param name="use_sim_time" value="$(var use_sim_time)"/>
+    </node>
+</launch>

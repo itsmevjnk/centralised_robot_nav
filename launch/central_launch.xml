@@ -43,10 +43,7 @@
         </node>
     </group>
 
-    <!-- COLLISION TELEMETRY -->
-    <node name="pose_telemetry" pkg="central_nav" exec="pose_telemetry_node" output="screen" if="$(var telemetry)">
-        <remap from="robot_poses" to="/robot_poses"/>
-        <remap from="telemetry" to="/telemetry"/>
-        <param name="use_sim_time" value="$(var use_sim_time)"/>
-    </node>
+    <include file="$(find-pkg-share central_nav)/launch/telemetry_launch.xml" if="$(var telemetry)">
+        <arg name="use_sim_time" value="$(var use_sim_time)" />
+    </include>
 </launch>
