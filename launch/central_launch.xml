@@ -6,6 +6,8 @@
 
     <arg name="oneshot" default="false"/> <!-- disregard path updates unless navigation is restarted -->
 
+    <arg name="telemetry" default="true"/> <!-- important telemetry logging to separate topic -->
+
     <node name="central_node" pkg="central_nav" exec="central_node" output="screen">
         <remap from="robot_poses" to="/robot_poses"/>
         <remap from="robot_paths" to="/robot_paths"/>
@@ -17,6 +19,9 @@
         <remap from="ix_markers" to="/ix_markers"/>
         <param name="use_sim_time" value="$(var use_sim_time)"/>
         <param name="oneshot" value="$(var oneshot)"/>    
+
+        <param name="telemetry" value="$(var telemetry)"/>
+        <remap from="telemetry" to="/telemetry"/>
     </node>
 
     <!-- VISUALISATION -->
@@ -33,4 +38,11 @@
             <param name="use_sim_time" value="$(var use_sim_time)" />
         </node>
     </group>
+
+    <!-- COLLISION TELEMETRY -->
+    <node name="pose_telemetry" pkg="central_nav" exec="pose_telemetry_node" output="screen" if="$(var telemetry)">
+        <remap from="robot_poses" to="/robot_poses"/>
+        <remap from="telemetry" to="/telemetry"/>
+        <param name="use_sim_time" value="$(var use_sim_time)"/>
+    </node>
 </launch>

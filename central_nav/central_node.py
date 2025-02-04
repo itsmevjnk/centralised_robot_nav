@@ -219,6 +219,10 @@ class Robot:
 class CentralNavigationNode(Node):
     def __init__(self):
         super().__init__('central_nav')
+
+        self.telemetry = self.declare_parameter('telemetry', True).get_parameter_value().bool_value
+        if self.telemetry:
+            self.telemetry_pub = self.create_publisher(String, 'telemetry', qos.qos_profile_system_default)
         
         self.raw_path_markers_pub = self.create_publisher(MarkerArray, 'raw_path_markers', qos.qos_profile_system_default)
         self.path_markers_pub = self.create_publisher(MarkerArray, 'path_markers', qos.qos_profile_system_default)
@@ -266,6 +270,8 @@ class CentralNavigationNode(Node):
             # command robot to move or stop
             if robot.move != move:
                 self.get_logger().info(f'commanding robot {robot_name} to ' + ('move' if move else f'STOP (against intersection(s) {stop_ixes})')) # avoid polluting logs
+                if self.telemetry:
+                    self.telemetry_pub.publish(String(data=f'{self.get_clock().now().nanoseconds}:central_nav:{robot_name},{move}')) # telemetry format: (nanosec):central_nav:(robot name),(True if commanded to move, else False)
             msg = String(data=robot_name)
             if move:
                 self.pass_pub.publish(msg)

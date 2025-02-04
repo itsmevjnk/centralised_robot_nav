@@ -11,3 +11,5 @@ topics:
   robot_stop:
     type: std_msgs/msg/String
     reversed: True
+  telemetry:
+    type: std_msgs/msg/String
