@@ -415,6 +415,9 @@ class CentralNavigationNode(Node):
                 if ix_dist <= 2 * IX_RADIUS: # intersections overlap
                     ix.occupant = old_ix.occupant if self.robots[old_ix.occupant].in_intersection(ix) else None # existing robot in intersection gets priority (since it's moving already) - TODO
         self.intersections = intersections
+
+        if self.telemetry:
+            self.telemetry_pub.publish(String(data=f'{self.get_clock().now().nanoseconds}:central_nav:ix,{len(self.intersections)}'))
     
     def cluster_intersections(self, intersections: list[Intersection]) -> list[Intersection]: # DBSCAN clustering
         if len(intersections) < 2: return intersections # no intersections to cluster
