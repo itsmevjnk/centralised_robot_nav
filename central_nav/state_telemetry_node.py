@@ -27,13 +27,13 @@ class NavStateTelemetryNode(Node):
         latest_status: GoalStatus = data.status_list[-1] # newest goal is last
         self.get_logger().info(f'latest goal status: {latest_status.status}')
 
-        if latest_status.status == 0 or latest_status.status > 4: # 4 = succeeded, 5 = canceled, 6 = aborted
-            return # we don't really care about cancelled/aborted goals (since that'll happen a lot), and also unknown statuses
+        if latest_status.status == 0 or latest_status.status == 5: # 4 = succeeded, 5 = canceled, 6 = aborted
+            return # we don't really care about cancelled goals (since that'll happen a lot), and also unknown statuses
 
         active = latest_status.status < 4 # 1 = accepted, 2 = executing, 3 = cancelling
         if self.active != active:
             self.get_logger().info(f'{self.robot_name} navigation status is {active}')
-            self.telemetry_pub.publish(String(data=f'{self.get_clock().now().nanoseconds}:state_telemetry:{self.robot_name},{active}'))
+            self.telemetry_pub.publish(String(data=f'{self.get_clock().now().nanoseconds}:state_telemetry:{self.robot_name},{active},{latest_status.status}'))
             self.active = active
             
 def main():
