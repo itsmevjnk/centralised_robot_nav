@@ -24,24 +24,10 @@
         <remap from="telemetry" to="/telemetry"/>
     </node>
 
-    <!-- VISUALISATION -->
-
-    <group if="$(var rviz)">
-        <group if="$(eval '\'$(var map)\' != \'\'')">
-            <node pkg="nav2_map_server" exec="map_server" name="map_server">
-                <param name="yaml_filename" value="$(var map)" />
-            </node>
-            <node pkg="nav2_lifecycle_manager" exec="lifecycle_manager" name="map_server_lifecycle">
-                <param name="autostart" value="true" />
-                <param name="use_sim_time" value="$(var use_sim_time)" />
-                <param name="node_names" value="['map_server']" />
-            </node>
-        </group>
-
-        <node pkg="rviz2" exec="rviz2" name="robots_rviz" args="-d $(find-pkg-share central_nav)/rviz/robots.rviz">
-            <param name="use_sim_time" value="$(var use_sim_time)" />
-        </node>
-    </group>
+    <include file="$(find-pkg-share central_nav)/launch/rviz_launch.xml" if="$(var rviz)">
+        <arg name="map" value="$(var map)" />
+        <arg name="use_sim_time" value="$(var use_sim_time)" />
+    </include>
 
     <include file="$(find-pkg-share central_nav)/launch/telemetry_launch.xml" if="$(var telemetry)">
         <arg name="use_sim_time" value="$(var use_sim_time)" />
