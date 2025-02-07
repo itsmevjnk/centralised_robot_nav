@@ -29,7 +29,7 @@
         <arg name="use_sim_time" value="$(var use_sim_time)" />
     </include>
 
-    <include file="$(find-pkg-share central_nav)/launch/telemetry_launch.xml" if="$(var telemetry)">
+    <!-- <include file="$(find-pkg-share central_nav)/launch/telemetry_launch.xml" if="$(var telemetry)">
         <arg name="use_sim_time" value="$(var use_sim_time)" />
-    </include>
+    </include> -->
 </launch>
