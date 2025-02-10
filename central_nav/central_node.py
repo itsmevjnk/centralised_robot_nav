@@ -127,6 +127,7 @@ class Robot:
     
     def set_pose(self, data: TransformStamped):
         self.pose = data.transform
+        self.next_wpt: int = 0
         self.check_next_wpt()
     
     def check_next_wpt(self): # check next waypoint index
