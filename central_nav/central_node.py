@@ -92,11 +92,11 @@ class Intersection:
 
 class Robot:
     def __init__(self, pose: TransformStamped | None = None, path: Path | None = None, min_path_length: float = 0.05):
+        self.next_wpt: int = 0
         if path is not None:
             self.set_path(path, min_path_length)
         else:
             self.waypoints: list[tuple[float, float]] = []
-            self.next_wpt: int = 0
 
         if pose is not None:
             self.set_pose(pose)
@@ -127,7 +127,6 @@ class Robot:
     
     def set_pose(self, data: TransformStamped):
         self.pose = data.transform
-        self.next_wpt: int = 0
         self.check_next_wpt()
     
     def check_next_wpt(self): # check next waypoint index
