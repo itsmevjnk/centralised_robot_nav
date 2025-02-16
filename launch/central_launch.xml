@@ -11,7 +11,6 @@
     <node name="central_node" pkg="central_nav" exec="central_node" output="screen">
         <remap from="robot_poses" to="/robot_poses"/>
         <remap from="robot_paths" to="/robot_paths"/>
-        <remap from="raw_path_markers" to="/raw_path_markers"/>
         <remap from="robot_pass" to="/robot_pass"/>
         <remap from="robot_stop" to="/robot_stop"/>
         <remap from="robot_markers" to="/robot_markers"/>
@@ -24,12 +23,13 @@
         <remap from="telemetry" to="/telemetry"/>
     </node>
 
-    <include file="$(find-pkg-share central_nav)/launch/rviz_launch.xml" if="$(var rviz)">
-        <arg name="map" value="$(var map)" />
-        <arg name="use_sim_time" value="$(var use_sim_time)" />
-    </include>
-
     <!-- <include file="$(find-pkg-share central_nav)/launch/telemetry_launch.xml" if="$(var telemetry)">
         <arg name="use_sim_time" value="$(var use_sim_time)" />
     </include> -->
+
+    <arg name="visualise" default="true" />
+    <include file="$(find-pkg-share central_nav)/launch/visualisation_launch.xml" if="$(var visualise)">
+        <arg name="rviz" value="$(var rviz)" />
+        <arg name="map" value="$(var map)" />
+    </include>
 </launch>

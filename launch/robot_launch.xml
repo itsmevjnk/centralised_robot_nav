@@ -20,11 +20,24 @@
         <remap from="pose" to="/robot_poses" />
     </node>
 
-    <node pkg="central_nav" exec="path_pub_node" name="path_pub_$(var name)">
+    <node pkg="central_nav" exec="path_erase_node" name="path_erase_$(var name)">
+        <remap from="path" to="/plan" />
+        <param name="use_sim_time" value="$(var use_sim_time)" />
+    </node>
+
+    <arg name="filter_path" default="true" />
+
+    <node pkg="central_nav" exec="path_pub_node" name="path_pub_$(var name)" unless="$(var filter_path)">
         <param name="robot_name" value="$(var name)" />
         <remap from="path_in" to="/plan" />
         <remap from="path_out" to="/robot_paths" />
-        <remap from="goal_status" to="/navigate_to_pose/_action/status" />
+        <param name="use_sim_time" value="$(var use_sim_time)" />
+    </node>
+
+    <node pkg="central_nav" exec="path_filter_node" name="path_filter_$(var name)" if="$(var filter_path)">
+        <param name="frame_id" value="$(var name)" />
+        <remap from="path_in" to="/plan" />
+        <remap from="path_out" to="/robot_paths" />
         <param name="use_sim_time" value="$(var use_sim_time)" />
     </node>
 

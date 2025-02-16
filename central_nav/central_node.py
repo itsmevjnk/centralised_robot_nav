@@ -154,14 +154,11 @@ class Robot:
             
     @staticmethod
     def path_to_waypoints(data: Path, min_length: float = 0.05) -> list[tuple[float, float]]:
-        waypoints = []
-        for pose in data.poses:
-            pose: Pose = pose.pose
-            point = (pose.position.x, pose.position.y) # point
-            if len(waypoints) > 0:
-                if ((point[0] - waypoints[-1][0])**2 + (point[1] - waypoints[-1][1])**2)**0.5 < min_length: continue # too short
-            waypoints.append(point) # otherwise add our point in
-        return waypoints
+        # path filtering has been moved to path_marker_node
+        return [
+            (pose.pose.position.x, pose.pose.position.y)
+            for pose in data.poses
+        ]
 
     def set_path(self, data: Path, min_length: float = 0.05):
         self.waypoints = Robot.path_to_waypoints(data, min_length)
@@ -224,7 +221,6 @@ class CentralNavigationNode(Node):
         if self.telemetry:
             self.telemetry_pub = self.create_publisher(String, 'telemetry', qos.qos_profile_system_default)
         
-        self.raw_path_markers_pub = self.create_publisher(MarkerArray, 'raw_path_markers', qos.qos_profile_system_default)
         self.path_markers_pub = self.create_publisher(MarkerArray, 'path_markers', qos.qos_profile_system_default)
         self.robot_markers_pub = self.create_publisher(MarkerArray, 'robot_markers', qos.qos_profile_system_default)
         self.ix_markers_pub = self.create_publisher(MarkerArray, 'ix_markers', qos.qos_profile_system_default)
@@ -319,7 +315,6 @@ class CentralNavigationNode(Node):
                     # return
             else:
                 new_waypoints = Robot.path_to_waypoints(data)
-                self.publish_raw_path_markers(robot_name, new_waypoints)
                 if len(robot.waypoints) > 1 and len(new_waypoints) > 1: # calculate Frechet distance
                     df = frdist(robot.waypoints[max(0, robot.next_wpt - 1):], new_waypoints)
                     self.get_logger().info(f'{robot_name}: Frechet distance of new path = {df}')
@@ -354,17 +349,6 @@ class CentralNavigationNode(Node):
                 make_marker(robot)
 
         self.path_markers_pub.publish(MarkerArray(markers=markers))
-
-    def publish_raw_path_markers(self, robot_name: str, waypoints: list[tuple[float, float]]):
-        self.raw_path_markers_pub.publish(MarkerArray(markers=self.publish_path_stub(
-            waypoints, ns=robot_name,
-            colour=ColorRGBA(
-                r = 1.0 - self.robots[robot_name].colour.r,
-                g = 1.0 - self.robots[robot_name].colour.g,
-                b = 1.0 - self.robots[robot_name].colour.b,
-                a = 1.0
-            )
-        )))
 
     def publish_path_stub(self, waypoints: list[tuple[float, float]], id: int = 0, scale: float = 0.01, colour: ColorRGBA | None = None, ns: str = '') -> list[Marker]:
         marker = Robot.waypoints_to_marker(waypoints, scale, colour)
