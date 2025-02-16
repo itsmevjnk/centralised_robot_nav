@@ -31,5 +31,6 @@
     <include file="$(find-pkg-share central_nav)/launch/visualisation_launch.xml" if="$(var visualise)">
         <arg name="rviz" value="$(var rviz)" />
         <arg name="map" value="$(var map)" />
+        <arg name="use_sim_time" value="$(var use_sim_time)" />
     </include>
 </launch>

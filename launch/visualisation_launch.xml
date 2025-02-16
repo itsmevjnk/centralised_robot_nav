@@ -1,5 +1,5 @@
 <launch>
-    <arg name="use_sim_time" default="" />
+    <arg name="use_sim_time" default="false" />
 
     <arg name="input_path" default="true" />
     <node name="input_path_marker" pkg="central_nav" exec="path_marker_node" if="$(var input_path)">
@@ -7,6 +7,7 @@
         <remap from="marker" to="/raw_path_markers" />
         <param name="thickness" value="0.01" />
         <param name="frame_id" value="map" />
+        <param name="use_sim_time" value="$(var use_sim_time)" />
     </node>
 
     <arg name="rviz" default="true" />
