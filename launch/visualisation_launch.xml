@@ -10,6 +10,15 @@
         <param name="use_sim_time" value="$(var use_sim_time)" />
     </node>
 
+    <arg name="robots" default="true" />
+    <node name="robot_marker" pkg="central_nav" exec="robot_marker_node" if="$(var robots)">
+        <remap from="robot_pass" to="/robot_pass" />
+        <remap from="robot_stop" to="/robot_stop" />
+        <remap from="robot_poses" to="/robot_poses" />
+        <remap from="marker" to="/robot_markers" />
+        <param name="use_sim_time" value="$(var use_sim_time)" />
+    </node>
+
     <arg name="rviz" default="true" />
     <arg name="map" default="" />
 

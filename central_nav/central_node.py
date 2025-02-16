@@ -186,23 +186,6 @@ class Robot:
     def path_marker(self) -> Marker:
         return Robot.waypoints_to_marker(self.waypoints, scale=0.02)
     
-    @property
-    def robot_marker(self) -> Marker:
-        marker = Marker()
-        # marker.header.stamp = self.get_clock().now().to_msg()
-        marker.header.frame_id = 'map'
-        marker.type = Marker.ARROW
-        marker.pose.position.x = self.pose.translation.x
-        marker.pose.position.y = self.pose.translation.y
-        marker.pose.position.z = self.pose.translation.z
-        marker.pose.orientation = self.pose.rotation
-        marker.scale.x = 0.25; marker.scale.y = marker.scale.z = 0.05
-        marker.color.a = 1.0
-        if self.move: marker.color.g = 1.0
-        else: marker.color.r = 1.0
-        marker.frame_locked = True
-        return marker
-    
     def __repr__(self) -> str:
         return f'Robot({self.position}, {len(self.waypoints)} wpt)'
     
@@ -222,7 +205,6 @@ class CentralNavigationNode(Node):
             self.telemetry_pub = self.create_publisher(String, 'telemetry', qos.qos_profile_system_default)
         
         self.path_markers_pub = self.create_publisher(MarkerArray, 'path_markers', qos.qos_profile_system_default)
-        self.robot_markers_pub = self.create_publisher(MarkerArray, 'robot_markers', qos.qos_profile_system_default)
         self.ix_markers_pub = self.create_publisher(MarkerArray, 'ix_markers', qos.qos_profile_system_default)
 
         self.pass_pub = self.create_publisher(String, 'robot_pass', qos.qos_profile_system_default)
@@ -246,7 +228,6 @@ class CentralNavigationNode(Node):
         # self.get_logger().info(f'{robot_name} next waypoint index is {self.robots[robot_name].next_wpt}')
 
         self.check_intersections()
-        self.publish_robot_markers()
     
     def check_intersections(self):
         for robot_name in self.robots:
@@ -276,16 +257,6 @@ class CentralNavigationNode(Node):
             robot.move = move # for visualisation
     
         self.publish_ix_markers()
-
-    def publish_robot_markers(self):
-        markers = [Marker(action=Marker.DELETEALL)] # delete all markers
-        stamp = self.get_clock().now().to_msg()
-        for robot in self.robots.values():
-            marker = robot.robot_marker
-            marker.header.stamp = stamp
-            marker.id = len(markers)
-            markers.append(marker)
-        self.robot_markers_pub.publish(MarkerArray(markers=markers))
 
     def publish_ix_markers(self):
         markers = [Marker(action=Marker.DELETEALL)] # delete all markers

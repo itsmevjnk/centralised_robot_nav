@@ -13,7 +13,6 @@
         <remap from="robot_paths" to="/robot_paths"/>
         <remap from="robot_pass" to="/robot_pass"/>
         <remap from="robot_stop" to="/robot_stop"/>
-        <remap from="robot_markers" to="/robot_markers"/>
         <remap from="path_markers" to="/path_markers"/>
         <remap from="ix_markers" to="/ix_markers"/>
         <param name="use_sim_time" value="$(var use_sim_time)"/>
