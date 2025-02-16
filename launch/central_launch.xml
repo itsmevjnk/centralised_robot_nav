@@ -10,6 +10,7 @@
 
     <arg name="df_threshold" default="1.0" />
     <node name="path_frechet" pkg="central_nav" exec="path_frechet_node" output="screen">
+        <remap from="poses" to="/robot_poses" />
         <remap from="paths_in" to="/robot_paths/raw" /> <!-- not really raw though, but it's as raw as we can get, as far as the central system is concerned -->
         <remap from="paths_out" to="/robot_paths" />
         <param name="threshold" value="$(var df_threshold)" />

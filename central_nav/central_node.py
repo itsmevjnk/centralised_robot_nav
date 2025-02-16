@@ -89,7 +89,6 @@ class Intersection:
 
 class Robot:
     def __init__(self, pose: TransformStamped | None = None, path: Path | None = None, min_path_length: float = 0.05):
-        self.next_wpt: int = 0
         if path is not None:
             self.set_path(path, min_path_length)
         else:
@@ -124,30 +123,6 @@ class Robot:
     
     def set_pose(self, data: TransformStamped):
         self.pose = data.transform
-        self.check_next_wpt()
-    
-    def check_next_wpt(self): # check next waypoint index
-        if self.waypoints is None or len(self.waypoints) < 2 or self.next_wpt >= len(self.waypoints) - 1: # no waypoints to work on
-            return
-        
-        # thanks ChatGPT :)
-        # while True:
-        A = np.array(self.waypoints[self.next_wpt]) # starting waypoint's coordinates
-        B = np.array(self.waypoints[self.next_wpt + 1]) # next waypoint's coordinates
-        P = np.array([self.pose.translation.x, self.pose.translation.y]) # pose coordinates
-        AB = B - A; AP = P - A
-        proj = AP.dot(AB) / AB.dot(AB) # projection scalar
-        # if proj < 0: # we're before A
-        #     if self.next_wpt == 0: return # can't go further back
-        #     else: self.next_wpt -= 1
-        # elif proj > 1: # we're beyond B
-        #     if self.next_wpt == len(self.waypoints) - 1: return # can't go further forward - TODO: we may want to raise error or something
-        #     else: self.next_wpt += 1
-        # else: # we're inside AB - choose B as next waypoint
-        #     self.next_wpt += 1
-        #     return
-        if proj >= 0: # somewhere along AB (or even beyond??? TODO)
-            self.next_wpt += 1
             
     @staticmethod
     def path_to_waypoints(data: Path, min_length: float = 0.05) -> list[tuple[float, float]]:
@@ -159,7 +134,6 @@ class Robot:
 
     def set_path(self, data: Path, min_length: float = 0.05):
         self.waypoints = Robot.path_to_waypoints(data, min_length)
-        self.check_next_wpt()
 
     @property
     def path(self) -> list[tuple[tuple[float, float], tuple[float, float]]]:
@@ -187,7 +161,6 @@ class Robot:
 
     def clear_path(self):
         self.waypoints = []
-        self.next_wpt = 0
 
 class CentralNavigationNode(Node):
     def __init__(self):
@@ -216,8 +189,6 @@ class CentralNavigationNode(Node):
             self.robots[robot_name] = Robot(pose=data)
         else:
             self.robots[robot_name].set_pose(data)
-
-        # self.get_logger().info(f'{robot_name} next waypoint index is {self.robots[robot_name].next_wpt}')
 
         self.check_intersections()
     
