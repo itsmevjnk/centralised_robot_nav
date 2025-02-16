@@ -26,6 +26,7 @@
     </node>
 
     <arg name="filter_path" default="true" />
+    <arg name="filter_min_length" default="0.05" />
 
     <node pkg="central_nav" exec="path_pub_node" name="path_pub_$(var name)" unless="$(var filter_path)">
         <param name="robot_name" value="$(var name)" />
@@ -39,6 +40,7 @@
         <remap from="path_in" to="/plan" />
         <remap from="path_out" to="/robot_paths" />
         <param name="use_sim_time" value="$(var use_sim_time)" />
+        <param name="min_length" value="$(var filter_min_length)" />
     </node>
 
     <let name="domain_bridge_config" value="$(find-pkg-share central_nav)/config/bridge_config.yml"/>
