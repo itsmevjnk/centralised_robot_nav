@@ -4,7 +4,8 @@ to_domain: 4
 topics:
   robot_paths:
     type: nav_msgs/msg/Path
-    bidirectional: true
+    remap: robot_paths/raw
+    # bidirectional: true
   robot_pass:
     type: std_msgs/msg/String
     reversed: True

@@ -9,7 +9,6 @@ import random
 import rclpy.publisher
 
 from .poly_point_isect import isect_segments_include_segments
-from .frechetdist import frdist
 
 from geometry_msgs.msg import TransformStamped, Transform, Pose, Point
 from nav_msgs.msg import Path
@@ -28,8 +27,6 @@ IX_RADIUS = 0.6 # intersection radius in metres
 
 IX_MIN_DIST = IX_RADIUS # minimum distance between intersections
 IX_MIN_SAMPLES = 2 # minimum number of samples to form a cluster (Copilot said 2, but let's try 1 for now)
-
-DF_MAX = 0.5 # maximum Frechet distance to treat two paths as the same
 
 class Intersection:
     def __init__(self, position: tuple[float, float], occupant: str | None = None):
@@ -181,10 +178,6 @@ class Robot:
         if colour is not None: marker.color = colour
         marker.frame_locked = True
         return marker
-
-    @property
-    def path_marker(self) -> Marker:
-        return Robot.waypoints_to_marker(self.waypoints, scale=0.02)
     
     def __repr__(self) -> str:
         return f'Robot({self.position}, {len(self.waypoints)} wpt)'
@@ -204,7 +197,6 @@ class CentralNavigationNode(Node):
         if self.telemetry:
             self.telemetry_pub = self.create_publisher(String, 'telemetry', qos.qos_profile_system_default)
         
-        self.path_markers_pub = self.create_publisher(MarkerArray, 'path_markers', qos.qos_profile_system_default)
         self.ix_markers_pub = self.create_publisher(MarkerArray, 'ix_markers', qos.qos_profile_system_default)
 
         self.pass_pub = self.create_publisher(String, 'robot_pass', qos.qos_profile_system_default)
@@ -285,51 +277,14 @@ class CentralNavigationNode(Node):
                     robot.clear_path()
                     # return
             else:
-                new_waypoints = Robot.path_to_waypoints(data)
-                if len(robot.waypoints) > 1 and len(new_waypoints) > 1: # calculate Frechet distance
-                    df = frdist(robot.waypoints[max(0, robot.next_wpt - 1):], new_waypoints)
-                    self.get_logger().info(f'{robot_name}: Frechet distance of new path = {df}')
-                    if df <= DF_MAX: # do not update path if distance is low
-                        return
-
                 if self.path_oneshot and not robot.accept_path:
                     return
-                robot.waypoints = new_waypoints
-                robot.next_wpt = 0; robot.check_next_wpt()
+                robot.set_path(data)
                 robot.accept_path = False
 
         # self.get_logger().info(f'received path of robot {robot_name} with {len(self.robots[robot_name].waypoints)} waypoint(s)')
         self.robots[robot_name].accept_path = len(robot.waypoints) < 2 # if we have less than 2 waypoints, we'll want to get new path
         self.find_intersections()
-        self.publish_path_markers(robot_name) # only update for this robot
-    
-    def publish_path_markers(self, robot: str | None = None):
-        markers = []
-
-        def make_marker(robot_name):
-            robot = self.robots[robot_name]
-            markers.extend(self.publish_path_stub(robot.waypoints, len(markers), 0.02, robot.colour, robot_name))
-
-        if robot is not None:
-            if robot not in self.robots:
-                self.get_logger().error(f'cannot publish path marker for nonexistent robot {robot}')
-                return
-            make_marker(robot)
-        else:
-            for robot in self.robots:
-                make_marker(robot)
-
-        self.path_markers_pub.publish(MarkerArray(markers=markers))
-
-    def publish_path_stub(self, waypoints: list[tuple[float, float]], id: int = 0, scale: float = 0.01, colour: ColorRGBA | None = None, ns: str = '') -> list[Marker]:
-        marker = Robot.waypoints_to_marker(waypoints, scale, colour)
-        marker.id = id + 1
-        marker.ns = ns
-
-        return [
-            Marker(action=Marker.DELETEALL, ns=ns, id=id),
-            marker
-        ]
 
     def find_intersections(self):
         segments = []

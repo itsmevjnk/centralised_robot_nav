@@ -30,6 +30,7 @@ setup(
             'path_pub_node = central_nav.path_pub_node:main',
             'path_erase_node = central_nav.path_erase_node:main',
             'path_filter_node = central_nav.path_filter_node:main',
+            'path_frechet_node = central_nav.path_frechet_node:main',
             'path_marker_node = central_nav.path_marker_node:main',
             'robot_marker_node = central_nav.robot_marker_node:main',
             'cmdvel_telemetry_node = central_nav.cmdvel_telemetry_node:main',

@@ -8,6 +8,14 @@
 
     <arg name="telemetry" default="true"/> <!-- important telemetry logging to separate topic -->
 
+    <arg name="df_threshold" default="1.0" />
+    <node name="path_frechet" pkg="central_nav" exec="path_frechet_node" output="screen">
+        <remap from="paths_in" to="/robot_paths/raw" /> <!-- not really raw though, but it's as raw as we can get, as far as the central system is concerned -->
+        <remap from="paths_out" to="/robot_paths" />
+        <param name="threshold" value="$(var df_threshold)" />
+        <param name="use_sim_time" value="$(var use_sim_time)" />
+    </node>
+
     <node name="central_node" pkg="central_nav" exec="central_node" output="screen">
         <remap from="robot_poses" to="/robot_poses"/>
         <remap from="robot_paths" to="/robot_paths"/>
