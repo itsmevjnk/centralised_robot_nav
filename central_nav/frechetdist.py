@@ -97,7 +97,8 @@ def frdist(p, q):
     len_q = len(q)
 
     if len_p == 0 or len_q == 0:
-        raise ValueError('Input curves are empty.')
+        # raise ValueError('Input curves are empty.')
+        return float('inf')
         
     ca = (np.ones((len_p, len_q), dtype=np.float64) * -1)
 
