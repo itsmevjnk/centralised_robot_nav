@@ -95,15 +95,15 @@ class RobotMarkerNode(Node):
         marker.header.frame_id = self.map_frame
         marker.header.stamp = stamp
 
-        marker.ns = name; marker.id = 1 # ID 0 will be delete all markers
+        marker.ns = name; marker.id = 0 # ID 0 will be delete all markers
 
         self.marker_pub.publish(MarkerArray(
             markers=[
-                Marker(
-                    header=marker.header,
-                    ns=name, id=0,
-                    action=Marker.DELETEALL
-                ), # delete all markers with this namespace
+                # Marker(
+                #     header=marker.header,
+                #     ns=name, id=0,
+                #     action=Marker.DELETEALL
+                # ), # delete all markers with this namespace
                 marker # new robot marker
             ]
         ))
