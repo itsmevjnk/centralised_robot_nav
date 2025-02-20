@@ -21,7 +21,7 @@ class PathPublisher(Node):
         self.create_subscription(GoalStatusArray, '/navigate_to_pose/_action/status', self.status_cb, latched_qos)
 
     def path_cb(self, data: Path):
-        data.header.frame_id = self.robot_name
+        # data.header.frame_id = self.robot_name
         self.pub.publish(data)
     
     def status_cb(self, data: GoalStatusArray):
@@ -29,7 +29,7 @@ class PathPublisher(Node):
 
         latest_status: GoalStatus = data.status_list[-1] # newest goal is last
         self.get_logger().info(f'latest goal status: {latest_status.status}')
-        if latest_status.status >= 4: # 4 = succeeded, 5 = canceled, 6 = aborted
+        if latest_status.status == 4 or latest_status.status == 6: # 4 = succeeded, 5 = canceled, 6 = aborted
             path = Path()
             path.header.stamp = self.get_clock().now().to_msg() # not really needed
             path.header.frame_id = self.map_frame
