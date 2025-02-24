@@ -603,7 +603,10 @@ def isect_polygon(segments, *, validate=True) -> list:
     return isect_polygon_impl(segments, include_segments=False, validate=validate)
 
 
-def isect_segments_include_segments(segments, *, validate=True) -> list:
+def isect_segments_include_segments(segments, *, validate=True, threshold=None) -> list:
+    if threshold is not None:
+        global DISTANCE_THRESHOLD
+        DISTANCE_THRESHOLD = threshold
     return isect_segments_impl(segments, include_segments=True, validate=validate)
 
 

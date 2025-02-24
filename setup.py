@@ -33,6 +33,7 @@ setup(
             'path_frechet_node = central_nav.path_frechet_node:main',
             'path_marker_node = central_nav.path_marker_node:main',
             'robot_marker_node = central_nav.robot_marker_node:main',
+            'ix_detect_node = central_nav.ix_detect_node:main',
             'cmdvel_telemetry_node = central_nav.cmdvel_telemetry_node:main',
             'pose_telemetry_node = central_nav.pose_telemetry_node:main',
             'state_telemetry_node = central_nav.state_telemetry_node:main'

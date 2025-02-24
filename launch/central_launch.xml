@@ -17,13 +17,22 @@
         <param name="use_sim_time" value="$(var use_sim_time)" />
     </node>
 
+    <arg name="min_path_dist" default="0.1" />
+    <arg name="ix_radius" default="0.6" />
+    <node name="ix_detect" pkg="central_nav" exec="ix_detect_node" output="screen">
+        <remap from="paths" to="/robot_paths" />
+        <remap from="intersections" to="/ix_markers/detected" />
+        <param name="min_path_dist" value="$(var min_path_dist)" />
+        <param name="ix_radius" value="$(var ix_radius)" />
+        <param name="use_sim_time" value="$(var use_sim_time)" />
+    </node>
+
     <node name="central_node" pkg="central_nav" exec="central_node" output="screen">
         <remap from="robot_poses" to="/robot_poses"/>
-        <remap from="robot_paths" to="/robot_paths"/>
+        <remap from="ix_markers_in" to="/ix_markers/detected"/>
+        <remap from="ix_markers_out" to="/ix_markers"/>
         <remap from="robot_pass" to="/robot_pass"/>
         <remap from="robot_stop" to="/robot_stop"/>
-        <remap from="path_markers" to="/path_markers"/>
-        <remap from="ix_markers" to="/ix_markers"/>
         <param name="use_sim_time" value="$(var use_sim_time)"/>
         <param name="oneshot" value="$(var oneshot)"/>    
 
