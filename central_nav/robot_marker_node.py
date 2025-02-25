@@ -76,7 +76,7 @@ class RobotMarkerNode(Node):
         self.update_marker(robot_name)
     
     def pose_cb(self, data: TransformStamped):
-        robot_name = data.header.frame_id
+        robot_name = data.child_frame_id
         if robot_name not in self.robots:
             self.robots[robot_name] = Robot(
                 pose=data,
@@ -99,11 +99,11 @@ class RobotMarkerNode(Node):
 
         self.marker_pub.publish(MarkerArray(
             markers=[
-                # Marker(
-                #     header=marker.header,
-                #     ns=name, id=0,
-                #     action=Marker.DELETEALL
-                # ), # delete all markers with this namespace
+                Marker(
+                    header=marker.header,
+                    ns=name, id=0,
+                    action=Marker.DELETEALL
+                ), # delete all markers with this namespace
                 marker # new robot marker
             ]
         ))
