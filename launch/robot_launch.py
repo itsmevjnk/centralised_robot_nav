@@ -137,7 +137,7 @@ def generate_launch_description():
             executable='path_filter_node',
             namespace=ns,
             parameters=[{
-                'robot_name': name,
+                'frame_id': name,
                 'min_length': filter_min_length,
                 'use_sim_time': use_sim_time
             }],
