@@ -200,8 +200,7 @@ def generate_launch_description():
             }],
             remappings=[
                 ('pass', '/robot_pass'),
-                ('stop', '/robot_stop'),
-                ('/navigate_to_pose/_action/cancel_goal', 'navigate_to_pose/_action/cancel_goal')
+                ('stop', '/robot_stop')
             ]
         )
     )
